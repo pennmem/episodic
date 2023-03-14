@@ -1,0 +1,247 @@
+"""
+formatting.py
+
+Author
+------
+Daniel Schonhaut
+Computational Memory Lab
+University of Pennsylvania
+daniel.schonhaut@gmail.com
+
+Description
+----------- 
+Functions for standardizing plot formatting and colors.
+
+Last Edited
+----------- 
+3/31/22
+"""
+from collections import OrderedDict as od
+from pandas import Series
+
+
+def get_colors():
+    """Return color and color palette dictionaries.
+
+    Returns
+    -------
+    colors : Series
+        Dictionary of individual colors.
+    palettes : Series
+        Dictionary of color palettes, each composed
+        of a sequence of colors defined in the colors
+        dictionary.
+    """
+    # Define colors.
+    colors = od([('red', '#E3120B'),
+                 ('blue', '#006BA2'),
+                 ('cyan', '#3EBCD2'),
+                 ('light_green', '#86E5D4'),
+                 ('yellow', '#EBB434'),
+                 ('green', '#379A8B'),
+                 ('dark_cyan', '#005F73'),
+                 ('plum', '#973C4C'),
+                 ('light_plum', '#AC8B96'),
+                 ('purple6', '#78405F'),
+                 ('purple5', '#925977'),
+                 ('purple4', '#AD7291'),
+                 ('purple3', '#C98CAC'),
+                 ('purple2', '#E6A6C7'),
+                 ('purple1', '#FFC2E3'),
+                 ('olive1', '#D7DB5A'),
+                 ('olive2', '#BAC03F'),
+                 ('olive3', '#9DA521'),
+                 ('olive4', '#818A00'),
+                 ('olive5', '#667100'),
+                 ('olive6', '#4C5900'),
+                 ('green6', '#005F52'),
+                 ('green5', '#00786B'),
+                 ('green4', '#2E9284'),
+                 ('green3', '#4DAD9E'),
+                 ('green2', '#69C9B9'),
+                 ('green1', '#86E5D4'),
+                 ('gold1', '#F2CF9A'),
+                 ('gold2', '#D5B480'),
+                 ('gold3', '#B99966'),
+                 ('gold4', '#9D7F4E'),
+                 ('gold5', '#826636'),
+                 ('gold6', '#674E1F'),
+                 ('cyan6', '#005F73'),
+                 ('cyan5', '#00788D'),
+                 ('cyan4', '#0092A7'),
+                 ('cyan3', '#25ADC2'),
+                 ('cyan2', '#4EC8DE'),
+                 ('cyan1', '#6FE4FB'),
+                 ('red1', '#FFA39F'),
+                 ('red2', '#FF8785'),
+                 ('red3', '#FF6B6C'),
+                 ('red4', '#E64E53'),
+                 ('red5', '#C7303C'),
+                 ('red6', '#A81829'),
+                 ('blue1', '#98DAFF'),
+                 ('blue2', '#7BBFFC'),
+                 ('blue3', '#5DA4DF'),
+                 ('blue4', '#3D89C3'),
+                 ('blue5', '#1270A8'),
+                 ('blue6', '#00588D'),
+                 ('black', '#000000'),
+                 ('gray4', '#3F5661'),
+                 ('gray3', '#758D99'),
+                 ('gray2', '#B7C6CF'),
+                 ('gray1', '#E9EDF0'),
+                 ('white', '#FFFFFF'),
+                ])
+    color_aliases = od([('red', 'r'),
+                        ('blue', 'b'),
+                        ('cyan', 'c'),
+                        ('light_green', 'lg'),
+                        ('yellow', 'y'),
+                        ('green', 'g'),
+                        ('dark_cyan', 'dc'),
+                        ('plum', 'm'),
+                        ('light_plum', 'lm'),
+                        ('purple6', 'p6'),
+                        ('purple5', 'p5'),
+                        ('purple4', 'p4'),
+                        ('purple3', 'p3'),
+                        ('purple2', 'p2'),
+                        ('purple1', 'p1'),
+                        ('olive1', 'o1'),
+                        ('olive2', 'o2'),
+                        ('olive3', 'o3'),
+                        ('olive4', 'o4'),
+                        ('olive5', 'o5'),
+                        ('olive6', 'o6'),
+                        ('green6', 'g6'),
+                        ('green5', 'g5'),
+                        ('green4', 'g4'),
+                        ('green3', 'g3'),
+                        ('green2', 'g2'),
+                        ('green1', 'g1'),
+                        ('gold1', 'a1'),
+                        ('gold2', 'a2'),
+                        ('gold3', 'a3'),
+                        ('gold4', 'a4'),
+                        ('gold5', 'a5'),
+                        ('gold6', 'a6'),
+                        ('cyan6', 'c6'),
+                        ('cyan5', 'c5'),
+                        ('cyan4', 'c4'),
+                        ('cyan3', 'c3'),
+                        ('cyan2', 'c2'),
+                        ('cyan1', 'c1'),
+                        ('red1', 'r1'),
+                        ('red2', 'r2'),
+                        ('red3', 'r3'),
+                        ('red4', 'r4'),
+                        ('red5', 'r5'),
+                        ('red6', 'r6'),
+                        ('black', 'k'),
+                        ('gray4', 'x4'),
+                        ('gray3', 'x3'),
+                        ('gray2', 'x2'),
+                        ('gray1', 'x1'),
+                        ('white', 'w'),
+                       ])
+    for color, alias in color_aliases.items():
+        colors[alias] = colors[color]
+
+    # Define color palettes.
+    palettes = od([('economist', (colors['blue'],
+                                  colors['cyan'],
+                                  colors['light_green'],
+                                  colors['yellow'],
+                                  colors['green'],
+                                  colors['dark_cyan'],
+                                  colors['plum'],
+                                  colors['light_plum'])),
+                    ('po', (colors['purple6'],
+                            colors['purple5'],
+                            colors['purple4'],
+                            colors['purple3'],
+                            colors['purple2'],
+                            colors['purple1'],
+                            colors['olive1'],
+                            colors['olive2'],
+                            colors['olive3'],
+                            colors['olive4'],
+                            colors['olive5'],
+                            colors['olive6'])),
+                    ('op', (colors['olive6'],
+                            colors['olive5'],
+                            colors['olive4'],
+                            colors['olive3'],
+                            colors['olive2'],
+                            colors['olive1'],
+                            colors['purple1'],
+                            colors['purple2'],
+                            colors['purple3'],
+                            colors['purple4'],
+                            colors['purple5'],
+                            colors['purple6'])),
+                    ('ga', (colors['green6'],
+                            colors['green5'],
+                            colors['green4'],
+                            colors['green3'],
+                            colors['green2'],
+                            colors['green1'],
+                            colors['gold1'],
+                            colors['gold2'],
+                            colors['gold3'],
+                            colors['gold4'],
+                            colors['gold5'],
+                            colors['gold6'])),
+                    ('ag', (colors['gold6'],
+                            colors['gold5'],
+                            colors['gold4'],
+                            colors['gold3'],
+                            colors['gold2'],
+                            colors['gold1'],
+                            colors['green1'],
+                            colors['green2'],
+                            colors['green3'],
+                            colors['green4'],
+                            colors['green5'],
+                            colors['green6'])),
+                    ('cr', (colors['cyan6'],
+                            colors['cyan5'],
+                            colors['cyan4'],
+                            colors['cyan3'],
+                            colors['cyan2'],
+                            colors['cyan1'],
+                            colors['red1'],
+                            colors['red2'],
+                            colors['red3'],
+                            colors['red4'],
+                            colors['red5'],
+                            colors['red6'])),
+                    ('rc', (colors['red6'],
+                            colors['red5'],
+                            colors['red4'],
+                            colors['red3'],
+                            colors['red2'],
+                            colors['red1'],
+                            colors['cyan1'],
+                            colors['cyan2'],
+                            colors['cyan3'],
+                            colors['cyan4'],
+                            colors['cyan5'],
+                            colors['cyan6'])),
+                    ('kw', (colors['black'],
+                            colors['gray4'],
+                            colors['gray3'],
+                            colors['gray2'],
+                            colors['gray1'],
+                            colors['white'])),
+                    ('wk', (colors['white'],
+                            colors['gray1'],
+                            colors['gray2'],
+                            colors['gray3'],
+                            colors['gray4'],
+                            colors['black']))
+                  ])
+    
+    colors = Series(colors, name='code')
+    palettes = Series(palettes, name='colors')
+    
+    return colors, palettes

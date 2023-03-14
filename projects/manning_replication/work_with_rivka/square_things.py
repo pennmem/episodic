@@ -1,0 +1,84 @@
+#!/home1/dscho/anaconda3/bin/python
+
+import os
+import time
+import errno
+import numpy as np
+
+def square(x):
+    """Return the square of x."""
+    output = str(x ** 2)
+    time.sleep(2)
+    return output
+
+def slow_way(nums):
+    """Get the square of each num in nums."""
+    start = time.time()
+    
+    outputs = []
+    
+    for num in nums:
+        output = square(num)
+        print('{} squared = {}'.format(num, output))
+        outputs.append(output)
+    
+    print('outputs = {}\n'.format(outputs))
+    print('Done in {:.0f} secs.'.format(time.time() - start))
+    return outputs
+    
+def fast_way(iterable):
+    """Distribute the operation across multiple cores."""
+    start = time.time()
+    
+    # Define flags for os.open
+    # os.O_CREAT: create file if it does not exist
+    # os.O_EXCL: error if create and file exists
+    # os.O_WRONLY: open for writing only
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    
+    for i, num in enumerate(iterable):
+        # Here is the name of the flag file.
+        fname = os.path.join('/home1/dscho/flag_files', 'flagfile_{}.txt'.format(i))
+        
+        # Try to open the file.
+        try:
+            f = os.open(fname, flags)
+            
+            # If we successfully made the file, 
+            # then perform our operation.
+            output = square(num)
+            
+            # Optionally, save the output into the file.
+            print(output, type(output))
+            os.write(f, output.encode())
+            
+            os.close(f)
+            
+        # If the file already existed...
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                continue
+            else:
+                raise
+    
+    print('Done in {:.0f} secs.'.format(time.time() - start))    
+    return None
+    
+if __name__ == '__main__':
+    os.chdir('/home1/dscho/code/projects/manning_replication/work_with_rivka/tmp_files')
+    
+    # Define a list of numbers.
+    nums = np.arange(10)
+    
+    job = 'fast'
+    
+    if job == 'slow':
+        # Square the numbers the slow way.
+        print('Squaring numbers the slow way.')
+        outputs = slow_way(nums)
+    elif job == 'fast':
+        # Square the numbers the fast way.
+        print('Squaring numbers the fast way.')
+        _ = fast_way(nums)
+    
+     
