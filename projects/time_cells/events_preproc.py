@@ -82,7 +82,7 @@ def read_events_json(subj_sess,
 def load_syncs(subj_sess,
                data_key='data',
                proj_dir='/home1/cjmac/projects/time_cells',
-               basename= 'Events.mat',#'sync_channel_micro.mat',
+               basename= 'sync_channel_micro.mat',
                verbose=True):
     """Load the EEG channel that stores sync pulses from the testing laptop."""
     subj, sess = subj_sess.split('_')
@@ -152,6 +152,7 @@ def find_pulse_starts(sync_chan,
     pulse_startinds : numpy.ndarray
         Array of indices that mark the start of each sync pulse.
     """
+
     # Find sync pulses by looking for suprathreshold changes 
     # in the absolute value of the derivative of the sync channel
     sync_pulses = np.abs(np.pad(np.diff(sync_chan), (1, 0), 'constant')) > pulse_thresh
@@ -160,6 +161,7 @@ def find_pulse_starts(sync_chan,
     # Find the inter-pulse intervals
     ipis = np.insert(np.diff(pulse_inds), 0, pulse_inds[0])
 
+    breakpoint()
     # Identify the start of each pulse by finding suprathreshold
     # inter-pulse intervals that are followed by a short IPI.
     interpulse_thresh = interpulse_thresh_ms * (sampling_rate / 1000)
@@ -290,7 +292,7 @@ def pair_sync_pulses(event_synctimes,
     # Iterate over input sync time vectors until we reach the end of one.
     global shift_lfps
     global shift_events
-    slides = _alternate_2col(max_slide)
+    slides = _alternate_2col(max_slide) #creates a matrix of all possible combinations
     lfp_synctimes_adj = []
     event_synctimes_adj = []
     shift_lfps = []
@@ -389,7 +391,7 @@ def align_sync_pulses(event_synctimes,  # vector of event sync times
     rlm_model = sm.RLM(y, X, M=sm.robust.norms.HuberT())
     rlm_results = rlm_model.fit()
     intercept, slope = rlm_results.params
-    
+
     # See how well the alignment went.
     sync_params = od([('intercept', intercept), ('slope', slope)])
     event_synctimes_aligned = intercept + (slope * event_synctimes)
@@ -458,6 +460,7 @@ def format_events(subj_sess=None,
     for trial, inds in trial_inds.items():
         events.loc[inds, 'trial'] = trial
 
+    breakpoint()
     # Add whether each trial has a time penalty or not. (-1 means we could not resolve.)
     events['time_penalty'] = -1
     for trial, has_penalty in {x['trial']: x['value']['isTimedTrial']
@@ -670,6 +673,7 @@ def _get_trial_inds(df):
             iRow += 2
         else:
             iRow += 1
+    breakpoint()
     return trial_inds
 
 

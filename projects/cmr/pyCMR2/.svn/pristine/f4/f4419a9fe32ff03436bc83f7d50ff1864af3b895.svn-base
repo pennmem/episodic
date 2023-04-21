@@ -1,0 +1,1055 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "hi\n"
+     ]
+    }
+   ],
+   "source": [
+    "import os\n",
+    "cwd = os.getcwd()\n",
+    "while True:\n",
+    "    if os.path.isfile(os.path.join(cwd, 'imdone.txt')):\n",
+    "        print 'hi'\n",
+    "        break"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def handle_intrusions(data_rec, data_pres, lists_per_div, max_back = 6):\n",
+    "    #TODO Realize that there are defaults in this code that should not be used for non-ltpFR2\n",
+    "    #For example in get_tic_for_div we default the experiment time at 75000. This is a property\n",
+    "    #of the recall time for ltpFR\n",
+    "    \n",
+    "    ############################################\n",
+    "    #Syntax:\n",
+    "    #data_rec: the numpy matrix of patient recordings\n",
+    "    #data_pres: the numpy matrix of presented words\n",
+    "    #lists per div: How many lists are you looking at one time???\n",
+    "    #data_rec_times: the times at which recordings happen\n",
+    "    #How far back are you looking for ppli (see abbreviations for more detail)\n",
+    "    \n",
+    "    # Abbreviations and notes:\n",
+    "    # tic: temporal_intrusio_curve - basically the number of intrusion in any sixth of the\n",
+    "    #overall recall period\n",
+    "    # ppli: Probability of PLI in terms of how many lists back. Like probability that a PLI comes\n",
+    "    # from one list back etc. If you measure up to 10 back then this code starts at the 11th list\n",
+    "    \n",
+    "    #Asides: \n",
+    "    #1. Each value is calculated separately to lower debug time and increase readibility at\n",
+    "    #the cost of runtime. The runtime of this isn't critical for CMR2 since its not in a constantly used part\n",
+    "    #but you have been warned\n",
+    "    ############################################\n",
+    "    def get_ppli_for_div(pres_div, rec_div, max_back):\n",
+    "        #pres div: presente words for this division\n",
+    "        #rec div: presented words for this division\n",
+    "        #max_back: the maximum of how far back you are looking\n",
+    "        #Returns div_ppli: the ppli for this division. Initialized below\n",
+    "        div_ppli = np.zeros(max_back)\n",
+    "        \n",
+    "        #Get the raw intrusion count\n",
+    "        num_pli = np.zeros(max_back)\n",
+    "        for list_number in range(max_back, len(rec_div)):\n",
+    "            #Get only the things not in the current rec list\n",
+    "            of_interest = [x for x in rec_div[list_number] if \\\n",
+    "                          x not in pres_div[list_number]]\n",
+    "            #Clean the of_interest array of 0s. These are filler\n",
+    "            while 0 in of_interest:\n",
+    "                of_interest.remove(0)\n",
+    "            #Check if it was in some previous list.\n",
+    "            for word in of_interest:\n",
+    "                for earlier_list_number, earlier_list in enumerate(pres_div[0:list_number]):\n",
+    "                    separation = list_number - earlier_list_number\n",
+    "                    #Don't pay attention to lists beyond a certain amount backward\n",
+    "                    if separation > max_back:\n",
+    "                        continue\n",
+    "                    if word in earlier_list and word != -1:\n",
+    "                        num_pli[separation -1] += 1\n",
+    "        if np.nansum(num_pli != 0):\n",
+    "            div_ppli = num_pli/float(np.nansum(num_pli))                \n",
+    "        return div_ppli \n",
+    "    \n",
+    "    #MAIN\n",
+    "    ppli_holder = []\n",
+    "    #Get the starting point for each division\n",
+    "    for division_start in range(0, len(data_pres), lists_per_div):\n",
+    "         #... and the ending point\n",
+    "        division_end = division_start + lists_per_div\n",
+    "        #Focus the variables to the division we're interested in here\n",
+    "        pres_div = data_pres[division_start: division_end]\n",
+    "        rec_div = data_rec[division_start: division_end]\n",
+    "        division_ppli =  get_ppli_for_div(pres_div, rec_div, max_back)\n",
+    "        ppli_holder.append(division_ppli)\n",
+    "        #if division_start == 120:\n",
+    "    ppli_holder = np.array(ppli_holder)\n",
+    "    ppli_holder = ppli_holder[~np.all(ppli_holder == 0, axis=1)]\n",
+    "    #return ppli_holder\n",
+    "    mean_ppli = ppli_holder.mean(axis = 0)\n",
+    "    sem_ppli = np.std(ppli_holder)/(len(ppli_holder) ** 0.5)\n",
+    "    return mean_ppli, sem_ppli"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(array([ 0.,  0.,  0.,  1.,  0.,  0.]), 0.2635231383473649)"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "pres_nos = np.loadtxt('pres_nos_LTP093.txt', delimiter=',')\n",
+    "handle_intrusions(rec_nos, pres_nos, 24)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "rec_nos = np.loadtxt('ppli_debug.txt')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "False"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import os\n",
+    "cwd = os.getcwd()\n",
+    "os.path.isfile(os.path.join(cwd, '0pfile.txt'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import time\n",
+    "from glob import glob\n",
+    "import numpy as np\n",
+    "def build_subj_file(swarm_size):\n",
+    "    ['LTP093', 'LTP106', 'LTP115', 'LTP117', 'LTP122', 'LTP123', 'LTP133', 'LTP138', 'LTP207',\\\n",
+    "     'LTP210','LTP228', 'LTP229', 'LTP236', 'LTP246', 'LTP249', 'LTP251', 'LTP258', 'LTP259',\\\n",
+    "     'LTP260','LTP265', 'LTP269', 'LTP273', 'LTP278', 'LTP279', 'LTP280', 'LTP283', 'LTP285', 'LTP287',\\\n",
+    "     'LTP293', 'LTP295', 'LTP296', 'LTP297', 'LTP299', 'LTP301', 'LTP302', 'LTP303', 'LTP304', 'LTP305',\\\n",
+    "     'LTP306', 'LTP307', 'LTP309', 'LTP310', 'LTP311', 'LTP312', 'LTP314', 'LTP316', 'LTP317', 'LTP318',\\\n",
+    "     'LTP320', 'LTP321', 'LTP322', 'LTP323', 'LTP324', 'LTP325', 'LTP327', 'LTP328', 'LTP330', 'LTP331',\\\n",
+    "     'LTP334', 'LTP336', 'LTP338', 'LTP339', 'LTP340', 'LTP342', 'LTP343', 'LTP344', 'LTP346', 'LTP347',\\\n",
+    "     'LTP348', 'LTP349', 'LTP353', 'LTP355', 'LTP357', 'LTP359', 'LTP361', 'LTP362', 'LTP364', 'LTP366']\n",
+    "    subjs = [subj for subj in subjs for i in xrange(swarm_size)]\n",
+    "    np.savetxt(\"subjects_ltpFR2.txt\", subjs,fmt='%s')\n",
+    "    return\n",
+    "def main(swarm_size = 2, iterations = 2):\n",
+    "    #Hard coded a lot of stuff if this is ever used by some1 other than me fix it\n",
+    "    start = 0\n",
+    "    end = 1\n",
+    "    #time in minutes\n",
+    "    time = 90\n",
+    "    build_subj_file(swarm_size)\n",
+    "    for i in xrange(start, end):\n",
+    "        os.system(\"rm *xfile*\")\n",
+    "        os.system(\"rm *pfile*\")\n",
+    "        os.system(\"rm *vfile*\")\n",
+    "        os.system(\"rm rmses*\")\n",
+    "        os.system(\"rm rg_iter*\")\n",
+    "        os.system(\"rm rp_iter*\")\n",
+    "        os.system(\"python noise_maker.py {} {}\".format(swarm_size, iterations))\n",
+    "        os.system(\"pgo pso_par_cmr2.py {}\".format(swarm_size))\n",
+    "        time.sleep(time * 60)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "def build_subj_list(swarm_size):\n",
+    "    subjs = ['LTP093', 'LTP106', 'LTP115', \\\n",
+    "         'LTP117', 'LTP122', 'LTP123', 'LTP133',\\\n",
+    "         'LTP138', 'LTP207', 'LTP210', 'LTP228', 'LTP229', 'LTP236',\\\n",
+    "         'LTP246', 'LTP249', 'LTP251', 'LTP258', 'LTP259', 'LTP260', \\\n",
+    "         'LTP265', 'LTP269', 'LTP273', 'LTP278', 'LTP279', 'LTP280', 'LTP283', \\\n",
+    "         'LTP285', 'LTP287', 'LTP293', 'LTP295', 'LTP296', 'LTP297', \\\n",
+    "         'LTP299', 'LTP301', 'LTP302', 'LTP303', 'LTP304', 'LTP305',\\\n",
+    "         'LTP306', 'LTP307', 'LTP309', 'LTP310', 'LTP311', 'LTP312', 'LTP314', 'LTP316',\\\n",
+    "         'LTP317', 'LTP318', 'LTP320', 'LTP321', 'LTP322', 'LTP323', 'LTP324', 'LTP325', \\\n",
+    "         'LTP327', 'LTP328', 'LTP330', 'LTP331', 'LTP334', 'LTP336', 'LTP338', 'LTP339', \\\n",
+    "         'LTP340', 'LTP342', 'LTP343', 'LTP344', 'LTP346', 'LTP347', 'LTP348', 'LTP349', \\\n",
+    "         'LTP353', 'LTP355', 'LTP357', 'LTP359', 'LTP361', 'LTP362', 'LTP364', 'LTP366']\n",
+    "    subjs = [subj for subj in subjs for i in xrange(swarm_size)]\n",
+    "    np.savetxt(\"subjects_ltpFR2.txt\", subjs,fmt='%s')\n",
+    "    return"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['LTP093', 'LTP093', 'LTP106', 'LTP106', 'LTP115', 'LTP115', 'LTP117', 'LTP117', 'LTP122', 'LTP122', 'LTP123', 'LTP123', 'LTP133', 'LTP133', 'LTP138', 'LTP138', 'LTP207', 'LTP207', 'LTP210', 'LTP210', 'LTP228', 'LTP228', 'LTP229', 'LTP229', 'LTP236', 'LTP236', 'LTP246', 'LTP246', 'LTP249', 'LTP249', 'LTP251', 'LTP251', 'LTP258', 'LTP258', 'LTP259', 'LTP259', 'LTP260', 'LTP260', 'LTP265', 'LTP265', 'LTP269', 'LTP269', 'LTP273', 'LTP273', 'LTP278', 'LTP278', 'LTP279', 'LTP279', 'LTP280', 'LTP280', 'LTP283', 'LTP283', 'LTP285', 'LTP285', 'LTP287', 'LTP287', 'LTP293', 'LTP293', 'LTP295', 'LTP295', 'LTP296', 'LTP296', 'LTP297', 'LTP297', 'LTP299', 'LTP299', 'LTP301', 'LTP301', 'LTP302', 'LTP302', 'LTP303', 'LTP303', 'LTP304', 'LTP304', 'LTP305', 'LTP305', 'LTP306', 'LTP306', 'LTP307', 'LTP307', 'LTP309', 'LTP309', 'LTP310', 'LTP310', 'LTP311', 'LTP311', 'LTP312', 'LTP312', 'LTP314', 'LTP314', 'LTP316', 'LTP316', 'LTP317', 'LTP317', 'LTP318', 'LTP318', 'LTP320', 'LTP320', 'LTP321', 'LTP321', 'LTP322', 'LTP322', 'LTP323', 'LTP323', 'LTP324', 'LTP324', 'LTP325', 'LTP325', 'LTP327', 'LTP327', 'LTP328', 'LTP328', 'LTP330', 'LTP330', 'LTP331', 'LTP331', 'LTP334', 'LTP334', 'LTP336', 'LTP336', 'LTP338', 'LTP338', 'LTP339', 'LTP339', 'LTP340', 'LTP340', 'LTP342', 'LTP342', 'LTP343', 'LTP343', 'LTP344', 'LTP344', 'LTP346', 'LTP346', 'LTP347', 'LTP347', 'LTP348', 'LTP348', 'LTP349', 'LTP349', 'LTP353', 'LTP353', 'LTP355', 'LTP355', 'LTP357', 'LTP357', 'LTP359', 'LTP359', 'LTP361', 'LTP361', 'LTP362', 'LTP362', 'LTP364', 'LTP364', 'LTP366', 'LTP366']\n"
+     ]
+    }
+   ],
+   "source": [
+    "print subjs"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 233,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "TypeError",
+     "evalue": "list indices must be integers, not tuple",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m\u001b[0m",
+      "\u001b[1;31mTypeError\u001b[0mTraceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-233-9da16148905d>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[1;32m----> 1\u001b[1;33m \u001b[1;32mprint\u001b[0m \u001b[0ma\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;36m2\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;31mTypeError\u001b[0m: list indices must be integers, not tuple"
+     ]
+    }
+   ],
+   "source": [
+    "print a[1,2]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 241,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[4, 6, 9]\n"
+     ]
+    }
+   ],
+   "source": [
+    "def mean_list(numbers):\n",
+    "    return float(sum(numbers)) / max(len(numbers), 1)\n",
+    "a = [1,4,6,9]\n",
+    "#a = list(mean_list(list(a[x[0]:x[1]])) for x in [[3,4]])\n",
+    "#print a\n",
+    "print a[1:]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def get_num_intrusions(data_rec, data_pres, ndivisions, lists_per_div):\n",
+    "    ################################\n",
+    "    #Syntax: \n",
+    "    # data_rec: the numpy matrix of patient recordings\n",
+    "    # data_pres: the numpy matrix of presented words\n",
+    "    #lists per div: How many lists are you looking at one time???\n",
+    "    #ndivisions: not used, keeping the call signature the same as Rivka's\n",
+    "    #Note for long stuff like ltpFR2 this function \n",
+    "    #Gets PLI per section, not for the entirety of the experiment\n",
+    "    #Which is what we are trying to fit for, for each section\n",
+    "    #returns: average plis/elis across divisions, adjusted standard error \n",
+    "    #of pli / eli or whatever its called\n",
+    "    #################################\n",
+    "    #Meta variables hold everything when we're done\n",
+    "    #with all divisions\n",
+    "    meta_pli = []\n",
+    "    meta_eli = []\n",
+    "    #Get the starting point for each division\n",
+    "    for division_start in range(0, len(data_pres), lists_per_div):\n",
+    "        #... and the ending point\n",
+    "        division_end = division_start + lists_per_div\n",
+    "        #Get the requisite data for that specific division\n",
+    "        #, recalled and presented\n",
+    "        pres_div = data_pres[division_start: division_end]\n",
+    "        rec_div = data_rec[division_start: division_end]\n",
+    "        #temporary variables to keep track of things for this\n",
+    "        #division\n",
+    "        pli_list_back = np.zeros(23)\n",
+    "        for list_number in range(len(rec_div)):\n",
+    "            #First find all the items in the rec that are not in the\n",
+    "            #pres. These are either PLIs or ELIs and are of interest\n",
+    "            # to this function... or they are vocalizations/0's\n",
+    "            of_interest = [x for x in rec_div[list_number] if \\\n",
+    "                          x not in pres_div[list_number]]\n",
+    "            #Clean the of_interest array of 0s\n",
+    "            while 0 in of_interest:\n",
+    "                of_interest.remove(0)\n",
+    "            #Check if it was in some previous list. This is not as computationally efficient \n",
+    "            #as it could be but runtime doesn't matter in this part of the code\n",
+    "            for word in of_interest:\n",
+    "                \n",
+    "                #Designed to make sure we don't double count if a PLI exists in two prior lists\n",
+    "                #will default to the list that is closer in proximity in this case and not \n",
+    "                #double count\n",
+    "                measured_pli_already_for_this_word = False \n",
+    "                \n",
+    "                for earlier_list in pres_div[0:list_number]:\n",
+    "                    if measured_pli_already_for_this_word:\n",
+    "                        continue\n",
+    "                    if word in earlier_list:\n",
+    "                        if word != -1:\n",
+    "                            PLI = True\n",
+    "                if PLI:\n",
+    "                    temp_pli_count += 1\n",
+    "                else:\n",
+    "                    temp_eli_count += 1\n",
+    "        meta_pli.append(temp_pli_count)\n",
+    "        meta_eli.append(temp_eli_count)\n",
+    "    # Part 2: Calculate the stuff you need\n",
+    "    meta_pli = np.array(meta_pli)\n",
+    "    meta_eli = np.array(meta_eli)\n",
+    "    mean_pli = np.mean(meta_pli, axis = 0)\n",
+    "    mean_eli = np.mean(meta_eli, axis = 0)\n",
+    "    sem_pli = np.std(meta_pli)/(len(meta_pli) ** 0.5)\n",
+    "    sem_eli = np.std(meta_eli)/(len(meta_eli) ** 0.5)\n",
+    "    \n",
+    "    #print meta_pli, meta_eli\n",
+    "    return mean_pli, mean_eli, sem_pli, sem_eli"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 207,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "def setup_txts(subj):\n",
+    "    data_path = '/data/eeg/scalp/ltp/ltpFR2/behavioral/data/stat_data_{}.mat'.format(subj)\n",
+    "    data = scipy.io.loadmat(data_path, squeeze_me=True, struct_as_record=False)['data']\n",
+    "    np.savetxt('division_locs_ind1.txt', data.session, delimiter=',', fmt='%i')\n",
+    "    np.savetxt('rec_nos_{}.txt'.format(subj), data.rec_itemnos, delimiter=',', fmt='%i')\n",
+    "    np.savetxt('pres_nos_{}.txt'.format(subj), data.pres_itemnos, delimiter=',', fmt='%i')\n",
+    "    np.savetxt('rec_times_{}.txt'.format(subj), data.times, delimiter=',', fmt='%i')\n",
+    "\n",
+    "def main():\n",
+    "    \n",
+    "    #Useful tip: if you run into a bug (like when I'm not here anymore check the TODO comments\n",
+    "    #They have stuff that is fishy or temporary (check both this code and the cython code)\n",
+    "    #########\n",
+    "    #\n",
+    "    #   Define some helpful global (yikes, I know!) variables.\n",
+    "    #\n",
+    "    #########\n",
+    "\n",
+    "    global ll, data_pres, data_rec, LSA_path, data_path, LSA_mat\n",
+    "    global target_spc, target_spc_sem, target_pfc, target_pfc_sem\n",
+    "    global target_left_crp, target_left_crp_sem\n",
+    "    global target_right_crp, target_right_crp_sem\n",
+    "    \n",
+    "    subj = 'LTP287'\n",
+    "    setup_txts(subj)\n",
+    "\n",
+    "    LSA_path = 'w2v.txt'\n",
+    "    data_path = 'pres_nos_{}.txt'.format(subj)\n",
+    "    rec_path = 'rec_nos_{}.txt'.format(subj)\n",
+    "    rec_times_path = 'rec_times_{}.txt'.format(subj)\n",
+    "\n",
+    "    LSA_mat = np.loadtxt(LSA_path)\n",
+    "\n",
+    "    ### comment this back in if getting data from a MATLAB file\n",
+    "    # get data file, presented items, & recalled items\n",
+    "    # data_file = scipy.io.loadmat(\n",
+    "    #     data_path, squeeze_me=True, struct_as_record=False)\n",
+    "    #\n",
+    "    # data_pres = data_file['data'].pres_itemnos      # presented\n",
+    "    # data_rec = data_file['data'].rec_itemnos        # recalled\n",
+    "\n",
+    "    # if getting data from a text file:\n",
+    "    data_pres = np.loadtxt(data_path, delimiter=',')\n",
+    "    data_rec = np.loadtxt(rec_path, delimiter=',')\n",
+    "    data_rec_times = np.loadtxt(rec_times_path, delimiter=',')\n",
+    "\n",
+    "    # set list length\n",
+    "    ll = 24\n",
+    "    # set n sessions\n",
+    "    nsessions = 24\n",
+    "    # set n lists per session\n",
+    "    lists_per_session=24\n",
+    "    return data_rec, data_pres, lists_per_session, nsessions, data_rec_times\n",
+    "    # get mean and sem for the observed data's PLI's and ELI's\n",
+    "    #Later code\n",
+    "#     target_PLI, target_ELI, \\\n",
+    "#     target_PLI_sem, target_ELI_sem = get_num_intrusions(\n",
+    "#         data_rec, data_pres,\n",
+    "#         lists_per_div=lists_per_session, ndivisions=nsessions, data_times=data_rec_times)\n",
+    "\n",
+    "#     # make sure we do not later divide by 0 in case the sem's are 0\n",
+    "#     if target_ELI_sem == 0:\n",
+    "#         target_ELI_sem = 1\n",
+    "#     if target_PLI_sem == 0:\n",
+    "#         target_PLI_sem = 1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 222,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "import mkl\n",
+    "mkl.set_num_threads(1)\n",
+    "import numpy as np\n",
+    "import os\n",
+    "import errno\n",
+    "import scipy.io\n",
+    "from glob import glob\n",
+    "import time\n",
+    "import sys\n",
+    "import pandas\n",
+    "\n",
+    "import lagCRP2\n",
+    "import CMR2_pack_cyth_LTP228 as CMR2\n",
+    "\n",
+    "def handle_intrusions(data_rec, data_pres, lists_per_div, data_rec_times, max_back = 6):\n",
+    "    #TODO Realize that there are defaults in this code that should not be used for non-ltpFR2\n",
+    "    #For example in get_tic_for_div we default the experiment time at 75000. This is a property\n",
+    "    #of the recall time for ltpFR\n",
+    "    \n",
+    "    ############################################\n",
+    "    #Syntax:\n",
+    "    #data_rec: the numpy matrix of patient recordings\n",
+    "    #data_pres: the numpy matrix of presented words\n",
+    "    #lists per div: How many lists are you looking at one time???\n",
+    "    #data_rec_times: the times at which recordings happen\n",
+    "    #How far back are you looking for ppli (see abbreviations for more detail)\n",
+    "    \n",
+    "    # Abbreviations and notes:\n",
+    "    # tic: temporal_intrusio_curve - basically the number of intrusion in any sixth of the\n",
+    "    #overall recall period\n",
+    "    # ppli: Probability of PLI in terms of how many lists back. Like probability that a PLI comes\n",
+    "    # from one list back etc. If you measure up to 10 back then this code starts at the 11th list\n",
+    "    \n",
+    "    #Asides: \n",
+    "    #1. Each value is calculated separately to lower debug time and increase readibility at\n",
+    "    #the cost of runtime. The runtime of this isn't critical for CMR2 since its not in a constantly used part\n",
+    "    #but you have been warned\n",
+    "    ############################################\n",
+    "    def get_ppli_for_div(pres_div, rec_div, max_back):\n",
+    "        #pres div: presente words for this division\n",
+    "        #rec div: presented words for this division\n",
+    "        #max_back: the maximum of how far back you are looking\n",
+    "        #Returns div_ppli: the ppli for this division. Initialized below\n",
+    "        div_ppli = np.zeros(max_back)\n",
+    "        \n",
+    "        #Get the raw intrusion count\n",
+    "        num_pli = np.zeros(max_back)\n",
+    "        for list_number in range(max_back, len(rec_div)):\n",
+    "            #Get only the things not in the current rec list\n",
+    "            of_interest = [x for x in rec_div[list_number] if \\\n",
+    "                          x not in pres_div[list_number]]\n",
+    "            #Clean the of_interest array of 0s. These are filler\n",
+    "            while 0 in of_interest:\n",
+    "                of_interest.remove(0)\n",
+    "            #Check if it was in some previous list.\n",
+    "            for word in of_interest:\n",
+    "                for earlier_list_number, earlier_list in enumerate(pres_div[0:list_number]):\n",
+    "                    separation = list_number - earlier_list_number\n",
+    "                    if separation > max_back:\n",
+    "                        continue\n",
+    "                    if word in earlier_list and word != -1:\n",
+    "                        num_pli[separation -1] += 1\n",
+    "        if np.nansum(num_pli != 0):\n",
+    "            div_ppli = num_pli/float(np.nansum(num_pli))                \n",
+    "        return div_ppli \n",
+    "    def get_tic_for_div(pres_div, rec_div, time_div, num_tics = 6, tot_time = 75000):\n",
+    "        \n",
+    "        #num_tics: number of separations for tic curve\n",
+    "        #tot_time: the total amount of time the experiment runs for\n",
+    "        \n",
+    "        #UPDATES: Normalized based on the overall number of recalled words\n",
+    "        #this is highlighted in the comments as EDIT1 you can comment out\n",
+    "        #these if you dont want this\n",
+    "        \n",
+    "        #Get the end of each separation\n",
+    "        end_of_seps = np.linspace(0, tot_time, num_tics+1)[1:] \n",
+    "        #TIC curve for each time sep\n",
+    "        tic_for_div = np.zeros(num_tics)\n",
+    "       \n",
+    "        #EDIT1-------\n",
+    "        #total number of recalls in any temporal spot\n",
+    "        total_num_for_div = np.zeros(num_tics)\n",
+    "        #---------\n",
+    "        for list_number in range(0, len(rec_div)):\n",
+    "            rec_list = rec_div[list_number]\n",
+    "            pres_list = pres_div[list_number]\n",
+    "            time_list = time_div[list_number]\n",
+    "            for word_num, word in enumerate(rec_list):\n",
+    "                #EDIT1 --------\n",
+    "                if word != 0 and word != -1:\n",
+    "                    time = time_list[word_num]\n",
+    "                    for possible_time in range(num_tics):\n",
+    "                        if time < end_of_seps[possible_time]:\n",
+    "                            total_num_for_div[possible_time] += 1\n",
+    "                            break\n",
+    "                #-------------\n",
+    "                 \n",
+    "                if word == 0 or word in pres_list:\n",
+    "                    continue\n",
+    "                for earlier_list in pres_div[0:list_number]:\n",
+    "                    if word in earlier_list and word != -1:\n",
+    "#                         print word\n",
+    "#                         print pres_list\n",
+    "#                         print rec_list\n",
+    "#                         print list_number\n",
+    "                        time = time_list[word_num]\n",
+    "#                         print time\n",
+    "                        for possible_time in range(num_tics):\n",
+    "                            if time < end_of_seps[possible_time]:\n",
+    "                                tic_for_div[possible_time] += 1\n",
+    "                                break\n",
+    "        for item_num in range(len(tic_for_div)):\n",
+    "            if total_num_for_div[item_num] == 0:\n",
+    "                tic_for_div[item_num] = 0\n",
+    "            else:\n",
+    "                tic_for_div[item_num] = \\\n",
+    "                tic_for_div[item_num]/(1.*total_num_for_div[item_num])\n",
+    "        return tic_for_div\n",
+    "                        \n",
+    "                    \n",
+    "    #MAIN\n",
+    "    tic_holder = []\n",
+    "    ppli_holder = []\n",
+    "    #Get the starting point for each division\n",
+    "    for division_start in range(0, len(data_pres), lists_per_div):\n",
+    "         #... and the ending point\n",
+    "        division_end = division_start + lists_per_div\n",
+    "        #Focus the variables to the division we're interested in here\n",
+    "        pres_div = data_pres[division_start: division_end]\n",
+    "        rec_div = data_rec[division_start: division_end]\n",
+    "        time_div = data_rec_times[division_start: division_end]\n",
+    "        division_ppli =  get_ppli_for_div(pres_div, rec_div, max_back)\n",
+    "        ppli_holder.append(division_ppli)\n",
+    "        #if division_start == 120:\n",
+    "        division_time = get_tic_for_div(pres_div, rec_div, time_div)\n",
+    "        tic_holder.append(division_time)\n",
+    "    ppli_holder = np.array(ppli_holder)\n",
+    "    ppli_holder = ppli_holder[~np.all(ppli_holder == 0, axis=1)]\n",
+    "    #return ppli_holder\n",
+    "    mean_ppli = ppli_holder.mean(axis = 0)\n",
+    "    sem_ppli = np.std(ppli_holder)/(len(ppli_holder) ** 0.5)\n",
+    "    \n",
+    "    tic_holder = np.array(tic_holder)\n",
+    "    mean_tic = tic_holder.mean(axis = 0)\n",
+    "    sem_tic = np.std(tic_holder)/(len(tic_holder) ** 0.5)\n",
+    "    return mean_ppli, sem_ppli, mean_tic, sem_tic"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 223,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "data_rec, data_pres, lists_per_div, nsessions, data_rec_times = main()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 224,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[ 0.          0.          0.04166667  0.          0.          0.        ]\n",
+      "[ 0.          0.          0.          0.          0.14285714  0.        ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.01098901  0.03448276  0.          0.          0.          0.        ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.          0.03846154  0.          0.          0.          0.        ]\n",
+      "[ 0.          0.          0.          0.33333333  0.          0.        ]\n",
+      "[ 0.01098901  0.          0.          0.25        0.          0.        ]\n",
+      "[ 0.          0.          0.09090909  0.          0.          0.        ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.  0.  0.  1.  0.  0.]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.    0.05  0.    0.    0.    0.  ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.01818182  0.          0.          0.          0.          0.        ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.00877193  0.          0.          0.          0.          0.        ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.   0.5  0.   0.   0.5  0. ]\n",
+      "[ 0.00917431  0.          0.          0.          0.          0.        ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n",
+      "[ 0.01204819  0.125       0.          0.          0.          0.        ]\n",
+      "[ 0.  0.  0.  0.  0.  0.]\n"
+     ]
+    }
+   ],
+   "source": [
+    "a = handle_intrusions(data_rec, data_pres, lists_per_div, data_rec_times,6)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 211,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 0.29166667,  0.20833333,  0.08333333,  0.125     ,  0.08333333,  0.        ])"
+      ]
+     },
+     "execution_count": 211,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a[2]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 198,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[array([ 2.,  3.,  1.,  0.,  0.,  0.])]"
+      ]
+     },
+     "execution_count": 198,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a[1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 128,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1.0"
+      ]
+     },
+     "execution_count": 128,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a[0].sum()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 92,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.20833333333333334"
+      ]
+     },
+     "execution_count": 92,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a[:,0].mean()\n",
+    "a.mean(axis = 0)[0]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 86,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 0.16666667,  0.        ,  0.        ,  0.        ,  0.        ,\n",
+       "        0.16666667,  0.16666667,  0.16666667,  0.        ,  0.16666667,\n",
+       "        0.        ,  0.        ,  0.        ,  0.        ,  0.16666667,\n",
+       "        0.16666667,  0.        ,  0.        ,  0.        ,  0.        ,\n",
+       "        0.        ,  0.        ,  0.16666667,  0.        ])"
+      ]
+     },
+     "execution_count": 86,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a.mean(axis = 1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[ 1014.,  1711.,  2679., ...,     0.,     0.,     0.],\n",
+       "       [ 1576.,  2086.,  3302., ...,     0.,     0.,     0.],\n",
+       "       [ 1364.,  2064.,  3340., ...,     0.,     0.,     0.],\n",
+       "       ..., \n",
+       "       [  326.,  1262.,  1904., ...,     0.,     0.,     0.],\n",
+       "       [  492.,   977.,  1600., ...,     0.,     0.,     0.],\n",
+       "       [  441.,   982.,  1537., ...,     0.,     0.,     0.]])"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "meta_pli = []\n",
+    "meta_eli = []\n",
+    "#Get the starting point for each division\n",
+    "for division_start in range(0, len(data_pres), lists_per_div):\n",
+    "    #... and the ending point\n",
+    "    division_end = division_start + lists_per_div\n",
+    "    #Get the requisite data for that specific division\n",
+    "    #, recalled and presented, and the times for a 6fold splitting by time interval (need to figure out which\n",
+    "    # part of the rec session the recall happens in)\n",
+    "    pres_div = data_pres[division_start: division_end]\n",
+    "    rec_div = data_rec[division_start: division_end]\n",
+    "    time_div = data_rec_times[division_start:division_end]\n",
+    "    #temporary variables to keep track of things for this\n",
+    "    #division. This is split 6 fold to keep track of which time partition it happens in\n",
+    "    temp_pli_count = np.zeros(6)\n",
+    "    temp_eli_count = np.zeros(6)\n",
+    "    for list_number in range(len(rec_div)):\n",
+    "        #First find all the items in the rec that are not in the\n",
+    "        #pres. These are either PLIs or ELIs and are of interest\n",
+    "        # to this function... or they are vocalizations/0's\n",
+    "        of_interest = [x for x in rec_div[list_number] if \\\n",
+    "                      x not in pres_div[list_number]]\n",
+    "        time_list = \n",
+    "        #Clean the of_interest array of 0s\n",
+    "        while 0 in of_interest:\n",
+    "            of_interest.remove(0)\n",
+    "        #Check if it was in some previous list. This is not as computationally efficient \n",
+    "        #as it could be but runtime doesn't matter in this part of the code\n",
+    "        for word in of_interest:\n",
+    "            PLI = False\n",
+    "            for earlier_list in pres_div[0:list_number]:\n",
+    "                if word in earlier_list:\n",
+    "                    if word != -1:\n",
+    "                        PLI = True\n",
+    "            if PLI:\n",
+    "                temp_pli_count += 1\n",
+    "            else:\n",
+    "                temp_eli_count += 1\n",
+    "    meta_pli.append(temp_pli_count)\n",
+    "    meta_eli.append(temp_eli_count)\n",
+    "# Part 2: Calculate the stuff you need\n",
+    "meta_pli = np.array(meta_pli)\n",
+    "meta_eli = np.array(meta_eli)\n",
+    "mean_pli = np.mean(meta_pli, axis = 0)\n",
+    "mean_eli = np.mean(meta_eli, axis = 0)\n",
+    "sem_pli = np.std(meta_pli)/(len(meta_pli) ** 0.5)\n",
+    "sem_eli = np.std(meta_eli)/(len(meta_eli) ** 0.5)\n",
+    "\n",
+    "#print meta_pli, meta_eli\n",
+    "return mean_pli, mean_eli, sem_pli, sem_eli"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "5\n",
+      "6\n",
+      "7\n"
+     ]
+    }
+   ],
+   "source": [
+    "x = [5,6,7]\n",
+    "for count, hey in enumerate(x):\n",
+    "    print hey"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "22"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(data_rec_times[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "22"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(data_rec[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[ 0.    0.01  0.04]\n"
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "x = np.array([0.,1.,2.])\n",
+    "y = np.array([1., 100., 50.])\n",
+    "print(np.divide(x,y))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[  0.  21.   2.]\n"
+     ]
+    }
+   ],
+   "source": [
+    "x = np.array([0,21,2])\n",
+    "print x.astype(float)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 0.,  0.,  0.,  0.])"
+      ]
+     },
+     "execution_count": 39,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.zeros(4)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "subs = ['LTP093', 'LTP106', 'LTP115', 'LTP117', 'LTP122', 'LTP123', 'LTP133', 'LTP138', 'LTP207',\\\n",
+    "     'LTP210','LTP228', 'LTP229', 'LTP236', 'LTP246', 'LTP249', 'LTP251', 'LTP258', 'LTP259',\\\n",
+    "     'LTP260','LTP265', 'LTP269', 'LTP273', 'LTP278', 'LTP279', 'LTP280', 'LTP283', 'LTP285', 'LTP287',\\\n",
+    "     'LTP293', 'LTP295', 'LTP296', 'LTP297', 'LTP299', 'LTP301', 'LTP302', 'LTP303', 'LTP304', 'LTP305',\\\n",
+    "     'LTP306', 'LTP307', 'LTP309', 'LTP310', 'LTP311', 'LTP312', 'LTP314', 'LTP316', 'LTP317', 'LTP318',\\\n",
+    "     'LTP320', 'LTP321', 'LTP322', 'LTP323', 'LTP324', 'LTP325', 'LTP327', 'LTP328', 'LTP330', 'LTP331',\\\n",
+    "     'LTP334', 'LTP336', 'LTP338', 'LTP339', 'LTP340', 'LTP342', 'LTP343', 'LTP344', 'LTP346', 'LTP347',\\\n",
+    "     'LTP348', 'LTP349', 'LTP353', 'LTP355', 'LTP357', 'LTP359', 'LTP361', 'LTP362', 'LTP364', 'LTP366']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "78\n"
+     ]
+    }
+   ],
+   "source": [
+    "print len(subs)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "environmentname",
+   "language": "python",
+   "name": "environmentname"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.13"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}

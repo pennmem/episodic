@@ -1,0 +1,19 @@
+Contents
+
+CMR2_BasePack
+- Contains CMR2 version based on Lohnas et al. (2015)
+- Source coding not enabled
+
+CMR2_SourceCoding
+- Contains early version of CMR2 with source coding enabled
+
+CMR2_Source_WithRepeats
+- Contains later version of CMR2 with source coding enabled
+- Enables CMR2 to represent repeated items
+
+CMR2_Optimized
+- Contains refactored and optimized version of CMR2 by Jesse Pazdera
+- Allows source coding
+- Allows repeated item presentations
+- Allows variable list length (just zero-pad your item presentation matrix
+)

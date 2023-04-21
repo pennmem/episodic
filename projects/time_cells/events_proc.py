@@ -174,6 +174,7 @@ class Events(object):
         time_bins = []
         for idx, row in event_times.iterrows():
             if row['gameState'] in game_state_durs:
+                breakpoint()
                 assert row['duration'] >= game_state_durs[row['gameState']]
                 time_bins.append(np.arange(row['time'][0], 
                                            row['time'][0] + game_state_durs[row['gameState']] + 1, 
@@ -845,7 +846,6 @@ def load_events(subj_sess,
 
     All kwargs are passed to Events.__init__
     """
-    
     if filename is None:
         filename = op.join(proj_dir, 'analysis', 'events', '{}-Events.pkl'.format(subj_sess))
 

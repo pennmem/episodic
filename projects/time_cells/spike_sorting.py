@@ -141,8 +141,7 @@ def load_lfp_timestamps(subj_sess=None,
                 lfp_timestamps = np.squeeze(f['timeStamps'])
         
         sr_ = np.int(np.rint(1000 / np.mean(np.diff(lfp_timestamps))))
-        
-       
+
         print( f'The first timestamp in lfp_timestamps before zero-ing & before conv factor is {lfp_timestamps[0]:.3f}' )
         if conv_factor == 'infer':
             if sr_ > 5e4:

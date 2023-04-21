@@ -1,0 +1,6 @@
+2020-08-16 21:40:45.465 [IPEngineApp] Using existing profile dir: '/home1/dscho/.ipython/profile_907a67be-e02a-11ea-afdc-0fbe992aa9c7'
+2020-08-16 21:40:45.475 [IPEngineApp] Loading url_file '/home1/dscho/.ipython/profile_907a67be-e02a-11ea-afdc-0fbe992aa9c7/security/ipcontroller-8b5e3659-f19f-455b-972c-34ab8b81c71a-engine.json'
+2020-08-16 21:40:45.496 [IPEngineApp] Registering with controller at tcp://192.168.86.117:36241
+2020-08-16 21:40:45.545 [IPEngineApp] Starting to monitor the heartbeat signal from the hub every 5010 ms.
+2020-08-16 21:40:45.548 [IPEngineApp] Using existing profile dir: '/home1/dscho/.ipython/profile_907a67be-e02a-11ea-afdc-0fbe992aa9c7'
+2020-08-16 21:40:45.549 [IPEngineApp] Completed registration with id 93
