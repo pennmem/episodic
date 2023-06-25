@@ -356,7 +356,7 @@ def format_spikes(subj_sess,
     spikes = pd.DataFrame(spikes, columns=cols)
     # Round spike times to the nearest ms.
     spikes['spike_times'] = spikes['spike_times'].apply(lambda x: np.rint(x).astype(np.int))
-    
+
     if verbose:
         print('Found {} neurons'.format(len(spikes)))
         print('Firing rates:', spikes['fr'].describe(), sep='\n', end='\n\n')

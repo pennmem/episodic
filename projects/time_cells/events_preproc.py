@@ -161,7 +161,7 @@ def find_pulse_starts(sync_chan,
     # Find the inter-pulse intervals
     ipis = np.insert(np.diff(pulse_inds), 0, pulse_inds[0])
 
-    breakpoint()
+    
     # Identify the start of each pulse by finding suprathreshold
     # inter-pulse intervals that are followed by a short IPI.
     interpulse_thresh = interpulse_thresh_ms * (sampling_rate / 1000)
@@ -460,7 +460,7 @@ def format_events(subj_sess=None,
     for trial, inds in trial_inds.items():
         events.loc[inds, 'trial'] = trial
 
-    breakpoint()
+    
     # Add whether each trial has a time penalty or not. (-1 means we could not resolve.)
     events['time_penalty'] = -1
     for trial, has_penalty in {x['trial']: x['value']['isTimedTrial']
@@ -673,7 +673,7 @@ def _get_trial_inds(df):
             iRow += 2
         else:
             iRow += 1
-    breakpoint()
+    
     return trial_inds
 
 
